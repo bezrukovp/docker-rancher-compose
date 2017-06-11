@@ -1,0 +1,49 @@
+#!/usr/bin/env python2
+
+import base64
+import httplib
+import json
+import os
+import sys
+from urlparse import urlparse
+
+# =======================================================================================================================
+# main
+# =======================================================================================================================
+if __name__ == '__main__':
+
+    obRUrl = urlparse(os.environ.get('RANCHER_URL'))
+    rAccessKey = os.environ.get('RANCHER_ACCESS_KEY')
+    rSecretKey = os.environ.get('RANCHER_SECRET_KEY')
+    rLBServiceId = os.environ.get('RANCHER_LB_SERVICE_ID')
+    rBGVariants = json.loads(os.environ.get('RANCHER_BG_VARIANTS'))
+
+    conn = httplib.HTTPSConnection(obRUrl.netloc)
+
+    headers = {
+        "Accept": "application/json",
+        "Authorization": "Basic " + base64.b64encode((rAccessKey + ':' + rSecretKey).encode('ascii')).decode("utf-8")
+    }
+
+    conn.request("GET", obRUrl.path + "/loadbalancerservices/" + rLBServiceId, None, headers)
+
+    response = conn.getresponse()
+    if response.status == 200:
+        sLbMeta = response.read()
+        lbMeta = json.loads(sLbMeta.decode("utf-8"))
+        linkedServices = lbMeta['linkedServices']
+        projects = []
+        nextProject = rBGVariants[0]
+        for sService, idService in linkedServices.items():
+            [project, service] = sService.split('/')
+            projects.append(project)
+            if project in rBGVariants:
+                nextProject = list(set(rBGVariants).difference([project]))[0]
+                break
+
+        print(nextProject)
+
+    else:
+        exitMessage = obRUrl.netloc + ' response: ' + str(response.status) + ' ' + response.reason
+        print(exitMessage)
+        sys.exit(1)

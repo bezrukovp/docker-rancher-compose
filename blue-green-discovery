@@ -51,7 +51,7 @@ if __name__ == '__main__':
             nextProject = discovery_by_port_rules(portRules, linkedServices)
         if not nextProject:
             nextProject = discovery_by_linked_services(linkedServices)
-        elif not nextProject:
+        if not nextProject:
             nextProject = rBGVariants[0]
 
         print(nextProject)
